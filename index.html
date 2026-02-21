@@ -1,0 +1,2285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Complex Imaginary Plotter</title>
+
+  <!-- ✅ Tiny, simple Argand-style web icon (no text) for the tab -->
+  <link rel="icon" type="image/svg+xml"
+    href='data:image/svg+xml;utf8,
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="%230ea5e9"/>
+      <stop offset="1" stop-color="%238b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="%230b1220"/>
+  <path d="M32 12v40M12 32h40" stroke="%23ffffff" stroke-opacity=".85" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="44" cy="20" r="5" fill="url(%23g)"/>
+  <circle cx="44" cy="20" r="8" fill="none" stroke="%23ffffff" stroke-opacity=".35" stroke-width="2"/>
+</svg>' />
+
+  <!-- ✅ Clash Grotesk (Fontshare). Falls back gracefully if offline. -->
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-grotesk@1,2,3,4,5,6,7&display=swap">
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#050a14;
+
+      --panel: rgba(255,255,255,0.08);
+      --panel-strong: rgba(255,255,255,0.11);
+      --border: rgba(255,255,255,0.14);
+      --border-soft: rgba(255,255,255,0.10);
+
+      --text: #f3f7ff;
+      --muted: rgba(243,247,255,0.72);
+
+      --accent: #7dd3fc;
+      --accent2: #a78bfa;
+      --danger: #fb7185;
+
+      --shadow: rgba(2,6,23,.70);
+      --shadow-soft: rgba(2,6,23,.42);
+
+      --radius: 14px;
+
+      --text-main: #f3f7ff;
+      --text-muted: rgba(243,247,255,0.74);
+      --border-color: rgba(255,255,255,0.14);
+      --input-bg: rgba(255,255,255,0.08);
+      --shadow-color: rgba(2,6,23,.6);
+      --intersect-color: #f87171;
+
+      --grid-axis: rgba(190,227,255,0.95);
+      --grid-major: rgba(255,255,255,0.08);
+      --grid-minor: rgba(255,255,255,0.05);
+
+      --canvas-bg-a: #071123;
+      --canvas-bg-b: #001021;
+
+      --focus: rgba(125,211,252,0.38);
+    }
+
+    body.light-mode{
+      --bg:#f3f6fb;
+      --bg2:#ffffff;
+
+      --panel: rgba(15,23,42,0.05);
+      --panel-strong: rgba(15,23,42,0.07);
+      --border: rgba(15,23,42,0.14);
+      --border-soft: rgba(15,23,42,0.10);
+
+      --text: #0b1220;
+      --muted: rgba(11,18,32,0.70);
+
+      --accent:#0ea5e9;
+      --accent2:#8b5cf6;
+      --danger:#ef4444;
+
+      --shadow: rgba(15,23,42,.18);
+      --shadow-soft: rgba(15,23,42,.10);
+
+      --text-main: #0b1220;
+      --text-muted: rgba(11,18,32,0.70);
+      --border-color: rgba(0,0,0,0.14);
+
+      --input-bg: rgba(15,23,42,0.05);
+      --shadow-color: rgba(100,116,139,0.18);
+      --intersect-color: #ef4444;
+
+      --grid-axis: rgba(2,132,199,0.95);
+      --grid-major: rgba(0,0,0,0.10);
+      --grid-minor: rgba(0,0,0,0.06);
+
+      --canvas-bg-a: #ffffff;
+      --canvas-bg-b: #f4f7ff;
+
+      --focus: rgba(14,165,233,0.22);
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: "Clash Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(125,211,252,0.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(167,139,250,0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      color:var(--text);
+      transition: background .25s ease, color .25s ease;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    .shell{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      padding: 14px;
+      gap: 12px;
+      box-sizing:border-box;
+    }
+
+    .globalbar{
+      height: 54px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 14px 38px var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      flex: 0 0 auto;
+      z-index: 40;
+    }
+
+    .global-left{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .logo{
+      width:34px; height:34px;
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(125,211,252,0.8), transparent 60%),
+        radial-gradient(circle at 70% 70%, rgba(167,139,250,0.65), transparent 60%),
+        rgba(255,255,255,0.06);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 10px 24px var(--shadow-soft);
+      flex: 0 0 auto;
+    }
+    .title-wrap{
+      display:flex;
+      flex-direction:column;
+      min-width: 0;
+      line-height: 1.1;
+    }
+    .title{
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      letter-spacing: .1px;
+    }
+    .subtitle{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .global-right{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .icon-square{
+      width: 40px;
+      height: 40px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      color: var(--text);
+      box-shadow: 0 10px 24px var(--shadow-soft);
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, background .2s ease, border-color .2s ease;
+      padding: 0;
+    }
+    .icon-square:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.08); }
+    .icon-square:active{ transform: translateY(0px) scale(0.98); }
+    .icon-square svg{ width: 20px; height: 20px; opacity: 0.95; display:block; }
+
+    .pill-btn{
+      height: 40px;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      color: var(--text);
+      box-shadow: 0 10px 24px var(--shadow-soft);
+      cursor:pointer;
+      font-weight: 650;
+      letter-spacing: .1px;
+      transition: transform .12s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+      white-space: nowrap;
+    }
+    .pill-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.08); }
+    .pill-btn:active{ transform: translateY(0px) scale(0.98); }
+
+    .supports-popover{
+      position: fixed;
+      width: min(560px, calc(100vw - 28px));
+      background: color-mix(in srgb, var(--panel-strong) 92%, black 8%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 12px;
+      display:none;
+      z-index: 70;
+    }
+    .supports-popover.open{ display:block; }
+    .supports-popover .hdr{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .supports-popover .hdr .t{
+      font-weight: 650;
+      font-size: 13px;
+      letter-spacing: .2px;
+    }
+    .supports-popover .content{
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.5;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .supports-popover .content strong{ color: var(--text); font-weight: 650; }
+
+    .app{
+      display:grid;
+      grid-template-columns: 390px 12px 1fr;
+      height: calc(100vh - 14px*2 - 54px - 12px);
+      gap:0;
+      flex: 1;
+      min-height:0;
+    }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      box-shadow: 0 14px 38px var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      min-height:0;
+    }
+
+    .panel.sidebar{
+      display:flex;
+      flex-direction:column;
+      padding: 12px 14px;
+      overflow:hidden;
+      min-height:0;
+    }
+
+    label{
+      display:block;
+      margin-top:10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .25px;
+    }
+
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-top:8px;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+
+    input[type=text]{
+      width:100%;
+      padding:10px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      box-sizing:border-box;
+      outline:none;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+      font-weight: 500;
+      letter-spacing: .1px;
+    }
+    input[type=text]::placeholder{ color: color-mix(in srgb, var(--muted) 85%, transparent); }
+    input[type=text]:focus{
+      border-color: rgba(125,211,252,0.65);
+      box-shadow: 0 0 0 4px var(--focus);
+      background: color-mix(in srgb, var(--input-bg) 70%, white 10%);
+    }
+
+    input[type=color]{
+      width: 42px !important;
+      height: 42px !important;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      overflow:hidden;
+    }
+
+    button{
+      border: 1px solid transparent;
+      background: linear-gradient(180deg, rgba(125,211,252,0.95), rgba(14,165,233,0.95));
+      color: #062033;
+      font-weight: 650;
+      cursor: pointer;
+      padding: 10px 12px;
+      border-radius: 12px;
+      transition: transform .12s ease, filter .15s ease, box-shadow .2s ease, border-color .2s ease;
+      box-shadow: 0 12px 26px var(--shadow-soft);
+      user-select:none;
+    }
+    button:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+    button:active{ transform: translateY(0px) scale(0.98); }
+
+    .btn-danger{
+      background: rgba(251,113,133,0.16) !important;
+      color: var(--text) !important;
+      border-color: rgba(251,113,133,0.45) !important;
+      box-shadow: none !important;
+    }
+
+    .char-buttons{ gap: 6px !important; }
+    .char-buttons button{
+      padding: 7px 10px !important;
+      font-size: 14px !important;
+      min-width: 34px !important;
+      background: rgba(255,255,255,0.05) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: none !important;
+      border-radius: 999px !important;
+      font-weight: 650 !important;
+    }
+    .char-buttons button:hover{
+      background: rgba(125,211,252,0.12) !important;
+      border-color: rgba(125,211,252,0.45) !important;
+      transform:none !important;
+      filter:none !important;
+    }
+
+    .items{
+      margin-top: 12px;
+      overflow:auto;
+      padding-right: 4px;
+      flex: 1;
+      min-height: 0;
+      overscroll-behavior: contain;
+    }
+
+    .item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-soft);
+      margin-bottom: 10px;
+      transition: background .15s ease, border-color .15s ease, transform .12s ease;
+    }
+    .item:hover{
+      background: rgba(255,255,255,0.075);
+      border-color: var(--border);
+      transform: translateY(-1px);
+    }
+
+    .expr-num{
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      display:grid;
+      place-items:center;
+      font-weight: 650;
+      font-size: 13px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      flex: 0 0 auto;
+    }
+
+    .swatch{
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      flex: 0 0 22px;
+    }
+
+    .item .meta{
+      flex: 1;
+      min-width: 0;
+    }
+    .item .meta > div:first-child{
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+      letter-spacing: .1px;
+    }
+    .muted{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .item .meta input{
+      width:100%;
+      margin:0 !important;
+      padding: 8px 10px !important;
+      font-size: 13px !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--border) !important;
+      background: rgba(255,255,255,0.08) !important;
+      color: var(--text) !important;
+      font-weight: 500 !important;
+    }
+
+    .item .iconbtn{
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border: 1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: none;
+      cursor:pointer;
+    }
+    .item .iconbtn:hover{
+      background: rgba(125,211,252,0.12);
+      border-color: rgba(125,211,252,0.45);
+      transform:none;
+      filter:none;
+    }
+    .item .iconbtn svg{ width: 18px; height: 18px; opacity: .95; display:block; }
+
+    footer{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-soft);
+      padding-bottom: 6px;
+      flex: 0 0 auto;
+    }
+
+    .panel.workspace{
+      position: relative;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      min-height:0;
+    }
+
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-soft);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+      touch-action: none;
+    }
+
+    #resizer{
+      cursor: col-resize;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      margin: 0 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: background-color .2s, border-color .2s;
+    }
+    #resizer:hover{
+      background: rgba(125,211,252,0.08);
+      border-color: rgba(125,211,252,0.20);
+    }
+
+    #collapseBtn{
+      width: 30px;
+      height: 46px;
+      padding: 0;
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-strong);
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--text);
+      box-shadow: 0 12px 26px var(--shadow-soft);
+      transition: background-color .2s, transform .12s ease;
+    }
+    #collapseBtn:hover{ transform: translateY(-1px); }
+    #collapseBtn:active{ transform: translateY(0px) scale(0.98); }
+    #collapseBtn svg{ width: 18px; height: 18px; transition: transform 0.3s ease; display:block; }
+
+    .app.sidebar-collapsed{
+      grid-template-columns: 0px 18px 1fr !important;
+    }
+    .app.sidebar-collapsed .panel.sidebar{
+      overflow: hidden;
+      padding: 0;
+      border: none;
+      box-shadow:none;
+      background: transparent;
+    }
+    .app.sidebar-collapsed #resizer{
+      background: transparent;
+      border-color: transparent;
+    }
+    .app.sidebar-collapsed #collapseBtn svg{
+      transform: rotate(180deg);
+    }
+
+    .tools-stack{
+      position:absolute;
+      right: 18px;
+      bottom: 18px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index: 20;
+    }
+    .tool-btn{
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 14px;
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: 0 12px 26px var(--shadow-soft);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      transition: transform .12s ease, background .2s ease, border-color .2s ease;
+      font-weight: 650;
+      font-size: 18px;
+    }
+    .tool-btn:hover{
+      background: rgba(125,211,252,0.12);
+      border-color: rgba(125,211,252,0.45);
+      transform: translateY(-1px);
+    }
+    .tool-btn:active{ transform: translateY(0px) scale(0.98); }
+    .tool-btn svg{ width: 20px; height: 20px; opacity: 0.95; display:block; }
+
+    .modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 80;
+      padding: 16px;
+    }
+    .modal-backdrop.open{ display:flex; }
+
+    .modal{
+      width: min(520px, 92vw);
+      background: color-mix(in srgb, var(--panel-strong) 92%, black 8%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 14px;
+      color: var(--text);
+    }
+    .modal-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .modal-title{
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: .2px;
+    }
+    .modal-close{
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: none;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 650;
+    }
+    .modal-close:hover{
+      background: rgba(251,113,133,0.16);
+      border-color: rgba(251,113,133,0.45);
+      transform: none;
+      filter:none;
+    }
+    .settings-grid{
+      display:grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .setting-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: rgba(255,255,255,0.05);
+    }
+    .setting-row .left{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .setting-row .name{
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .setting-row .desc{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .switch{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+    .switch input[type="checkbox"]{
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor:pointer;
+    }
+    .switch select{
+      width: 160px;
+      margin: 0;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      outline:none;
+      font-family: inherit;
+    }
+
+    body.enlarge-text{
+      --panel: rgba(255,255,255,0.12);
+      --panel-strong: rgba(255,255,255,0.16);
+      --border: rgba(255,255,255,0.22);
+      --border-soft: rgba(255,255,255,0.16);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.82);
+    }
+
+    body.enlarge-text input[type=text], body.enlarge-text select{ font-size: 18px; padding: 14px 14px; }
+    body.enlarge-text button{ font-size: 16px; padding: 14px 16px; border-radius: 14px; }
+    body.enlarge-text .char-buttons button{ font-size: 18px !important; padding: 12px 14px !important; }
+    body.enlarge-text .item{ padding: 12px; }
+    body.enlarge-text .item .meta > div:first-child{ font-size: 15px; }
+    body.enlarge-text .muted{ font-size: 13px; }
+    body.enlarge-text .tool-btn{ width: 52px; height: 52px; border-radius: 16px; }
+    body.enlarge-text .expr-num{ width: 34px; height: 34px; border-radius: 12px; font-size: 14px; }
+
+    .sr-only{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0,0,0,0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+  </style>
+</head>
+
+<body class="light-mode">
+  <div class="shell">
+    <div class="globalbar" id="globalbar">
+      <div class="global-left">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title-wrap">
+          <div class="title">Complex Plotter</div>
+          <div class="subtitle">Your desmos for complex equations</div>
+        </div>
+      </div>
+
+      <div class="global-right">
+        <button id="supportsBtn" class="pill-btn" aria-haspopup="true" aria-expanded="false" title="Check out what we support">
+          <!-- ✅ Proper question mark icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.5 9a2.5 2.5 0 1 1 4.2 1.8c-.9.7-1.7 1.2-1.7 2.7"></path>
+            <path d="M12 17h.01"></path>
+          </svg>
+          Check out what we support
+        </button>
+
+        <button id="themeToggle" class="icon-square" title="Toggle theme" aria-label="Toggle theme"></button>
+      </div>
+    </div>
+
+    <div id="supportsPopover" class="supports-popover" role="dialog" aria-label="Supports">
+      <div class="hdr">
+        <div class="t">Check out what we support</div>
+        <button id="supportsClose" class="icon-square" style="width:36px;height:36px;box-shadow:none" aria-label="Close supports" title="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="content">
+        <strong>Vectors:</strong> z=3+2i, z=(3+21i)-(1-21i), z=3pi/4<br>
+        <strong>Loci (Circles):</strong> |z-(1+21i)|=3; |z-1|&lt;3<br>
+        <strong>Bisectors:</strong> |z-(-2+1i)|=|z-(1-31i)|; |z-3|=|z+21i|<br>
+        <strong>Arguments:</strong> arg(z-2+i) = pi<br>
+        <strong>Degrees:</strong> 45deg, 45° (works even in radians mode)
+      </div>
+    </div>
+
+    <div class="app">
+      <div class="panel sidebar">
+        <label for="expr">Enter Expression</label>
+        <div class="controls" style="gap:8px; margin-top: 8px;">
+          <input id="expr" type="text" style="margin:0" placeholder="e.g. 0 < arg(z) < pi/4"/>
+          <input id="color" type="color" value="#7dd3fc" aria-label="Pick color"/>
+        </div>
+
+        <div class="controls char-buttons" style="margin-top: 8px;">
+          <button data-char="|">modulus</button>
+          <button data-char="pi">π</button>
+          <button data-char="arg()">argument</button>
+        </div>
+
+        <div class="controls">
+          <button id="addBtn">Add</button>
+          <button id="clearAll" class="btn-danger">Clear all</button>
+        </div>
+
+        <div class="items" id="items" aria-label="Expressions list"></div>
+
+        <footer>
+          • Complex plotter by Bors
+        </footer>
+      </div>
+
+      <div id="resizer">
+        <button id="collapseBtn" title="Toggle sidebar" aria-label="Toggle sidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.75 19.5L8.25 12l7.5-7.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="panel workspace">
+        <canvas id="c" aria-label="Complex plane graph"></canvas>
+
+        <div class="tools-stack" aria-label="Tools">
+          <button id="zoomInBtn" class="tool-btn" title="Zoom in" aria-label="Zoom in">+</button>
+          <button id="zoomOutBtn" class="tool-btn" title="Zoom out" aria-label="Zoom out">−</button>
+
+          <button id="zoomHomeBtn" class="tool-btn" title="Reset view" aria-label="Reset view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 11l9-8 9 8"/><path d="M9 22V12h6v10"/>
+            </svg>
+          </button>
+
+          <button id="fitBtn" class="tool-btn" title="Fit to objects" aria-label="Fit to objects">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/>
+              <path d="M9 9h6v6H9z"/>
+            </svg>
+          </button>
+
+          <button id="saveIconBtn" class="tool-btn" title="Download graphs" aria-label="Download graphs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
+            </svg>
+          </button>
+
+          <button id="loadIconBtn" class="tool-btn" title="Upload graphs" aria-label="Upload graphs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <path d="M7 8l5-5 5 5"/><path d="M12 3v12"/>
+            </svg>
+          </button>
+
+          <!-- ✅ Fixed settings icon (properly centered) -->
+          <button id="settingsGearBtn" class="tool-btn" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.87l.05.05a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.54V21a2 2 0 0 1-4 0v-.06A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.33l-.05.05a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.54-1H3a2 2 0 0 1 0-4h.06A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.33-1.87l-.05-.05a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.54V3a2 2 0 0 1 4 0v.06A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.33l.05-.05a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.54 1H21a2 2 0 0 1 0 4h-.06A1.7 1.7 0 0 0 19.4 15z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div id="a11yStatus" class="sr-only" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="settingsTitle">Settings</div>
+        <button id="settingsClose" class="modal-close" aria-label="Close settings">✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Grid</div>
+            <div class="desc">Show/hide grid lines.</div>
+          </div>
+          <div class="switch"><input id="toggleGrid" type="checkbox" /></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Axes</div>
+            <div class="desc">Show/hide the axes.</div>
+          </div>
+          <div class="switch"><input id="toggleAxes" type="checkbox" /></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Axis numbers</div>
+            <div class="desc">Show/hide axis tick labels.</div>
+          </div>
+          <div class="switch"><input id="toggleAxisLabels" type="checkbox" /></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Axis names</div>
+            <div class="desc">Show/hide “Real” and “Imaginary”.</div>
+          </div>
+          <div class="switch"><input id="toggleAxisNames" type="checkbox" /></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Axis arrows</div>
+            <div class="desc">Show/hide arrow heads on axes.</div>
+          </div>
+          <div class="switch"><input id="toggleAxisArrows" type="checkbox" /></div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Angle mode</div>
+            <div class="desc">Interpret arg/sector numeric angles as radians or degrees.</div>
+          </div>
+          <div class="switch">
+            <select id="angleModeSelect" aria-label="Angle mode">
+              <option value="rad">Radians</option>
+              <option value="deg">Degrees</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="left">
+            <div class="name">Enlarge Text</div>
+            <div class="desc">Big UI + stronger contrast (screenreader/braille friendly).</div>
+          </div>
+          <div class="switch"><input id="toggleEnlargeText" type="checkbox" /></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // --- Utilities ---
+  const Epsilon = 1e-9;
+  function clamp(v,a,b){return Math.min(Math.max(v,a),b)}
+
+  // Settings
+  const SETTINGS_KEY = "complex_plotter_settings_v4";
+  let settings = {
+    showGrid: true,
+    showAxes: true,
+    showAxisLabels: true,
+    showAxisNames: true,
+    showAxisArrows: true,
+    angleMode: "rad",
+    enlargeText: false
+  };
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if(!raw) return;
+      const obj = JSON.parse(raw);
+      if(typeof obj === "object" && obj) settings = {...settings, ...obj};
+    }catch(_){}
+  }
+  function saveSettings(){
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(_){}
+  }
+
+  // --- Numbers ---
+  function evalNum(s) {
+    if(!s) return NaN;
+    s = s.toLowerCase().trim();
+
+    let sign = 1;
+    if(s.startsWith('-')) { sign = -1; s = s.substring(1); }
+    else if(s.startsWith('+')) { s = s.substring(1); }
+
+    let val = NaN;
+
+    if (s.includes('/')) {
+      const parts = s.split('/');
+      if(parts.length === 2) {
+        const num = evalNum(parts[0]);
+        const den = evalNum(parts[1]);
+        val = num / den;
+      }
+    } else if(s === 'pi' || s === 'π') {
+      val = Math.PI;
+    } else if(s.endsWith('pi') || s.endsWith('π')) {
+      const factor = s.replace(/pi|π/g, '');
+      val = (factor === '' ? 1 : parseFloat(factor)) * Math.PI;
+    } else {
+      s = s.replace(/deg$/,'').replace(/°$/,'');
+      val = parseFloat(s);
+    }
+
+    return val * sign;
+  }
+
+  function evalAngle(s){
+    if(!s) return NaN;
+    const raw = s.toLowerCase().trim();
+    const hasDeg = /deg$/.test(raw) || /°$/.test(raw);
+    const hasPi = raw.includes("pi") || raw.includes("π");
+    let v = evalNum(raw);
+    if(hasDeg && !isNaN(v)) return v * (Math.PI/180);
+    if(settings.angleMode === "deg" && !hasPi && !isNaN(v)) return v * (Math.PI/180);
+    return v;
+  }
+
+  function formatNum(n){
+    if(Math.abs(n) < Epsilon) return '0';
+    const ratio = n / Math.PI;
+    const limit = 12;
+
+    if(Math.abs(ratio - Math.round(ratio)) < Epsilon) {
+      const i = Math.round(ratio);
+      if(i === 1) return 'π';
+      if(i === -1) return '-π';
+      return i + 'π';
+    }
+    for(let d = 2; d <= limit; d++){
+      const num = ratio * d;
+      if(Math.abs(num - Math.round(num)) < Epsilon){
+        const i = Math.round(num);
+        const sign = i < 0 ? '-' : '';
+        const val = Math.abs(i);
+        return `${sign}${val === 1 ? '' : val}π/${d}`;
+      }
+    }
+    let s = Number(n.toPrecision(12));
+    return Number(s.toFixed(4)).toString();
+  }
+
+  function complexLabel(x, y){
+    const a = formatNum(x);
+    const b = formatNum(Math.abs(y));
+    const sign = (y >= -Epsilon) ? "+" : "-";
+    return `${a} ${sign} ${b}i`;
+  }
+
+  // High-contrast palette (works great on white backgrounds)
+  const HIGH_CONTRAST_COLORS = [
+    "#2563eb", "#dc2626", "#059669", "#7c3aed", "#ea580c",
+    "#0891b2", "#be123c", "#4f46e5", "#15803d", "#b45309"
+  ];
+  let colorIndex = 0;
+  function getRandomColor() {
+    const color = HIGH_CONTRAST_COLORS[colorIndex % HIGH_CONTRAST_COLORS.length];
+    colorIndex++;
+    return color;
+  }
+
+  // --- Theme icons ---
+  function sunIcon(){
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"></path>
+      </svg>`;
+  }
+  function moonIcon(){
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.7A7.5 7.5 0 0 1 11.3 3a6.8 6.8 0 1 0 9.7 9.7z"></path>
+      </svg>`;
+  }
+  function updateThemeIcon(){
+    const btn = document.getElementById("themeToggle");
+    const isLight = document.body.classList.contains("light-mode");
+    btn.innerHTML = isLight ? moonIcon() : sunIcon();
+  }
+
+  // --- Canvas and view ---
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let DPR = window.devicePixelRatio || 1;
+
+  function fitCanvas(){
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(r.width * DPR);
+    canvas.height = Math.floor(r.height * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize',()=>{fitCanvas();draw(); positionSupportsPopover();});
+
+  let view = {offsetX:0, offsetY:0, scale:40};
+  let currentThemeColors = {};
+
+  function updateThemeColors() {
+    const style = getComputedStyle(document.body);
+    currentThemeColors = {
+      axis: style.getPropertyValue('--grid-axis').trim(),
+      major: style.getPropertyValue('--grid-major').trim(),
+      minor: style.getPropertyValue('--grid-minor').trim(),
+      text: style.getPropertyValue('--text-main').trim(),
+      panel: style.getPropertyValue('--panel').trim(),
+      intersect: style.getPropertyValue('--intersect-color').trim(),
+      canvasBg: `linear-gradient(180deg, ${style.getPropertyValue('--canvas-bg-a').trim()} 0%, ${style.getPropertyValue('--canvas-bg-b').trim()} 100%)`
+    };
+    canvas.style.background = currentThemeColors.canvasBg;
+  }
+
+  function worldToScreen(x,y){
+    const cx = canvas.width/DPR/2 + view.offsetX + x*view.scale;
+    const cy = canvas.height/DPR/2 + view.offsetY - y*view.scale;
+    return {x:cx,y:cy};
+  }
+  function screenToWorld(sx,sy){
+    const x = (sx - (canvas.width/DPR/2) - view.offsetX)/view.scale;
+    const y = -((sy - (canvas.height/DPR/2) - view.offsetY)/view.scale);
+    return {x,y};
+  }
+
+  function zoomAtScreenPoint(sx, sy, factor){
+    const before = screenToWorld(sx, sy);
+    view.scale *= factor;
+    view.scale = clamp(view.scale, 0.1, 800);
+    const after = screenToWorld(sx, sy);
+    view.offsetX += (after.x - before.x) * view.scale;
+    view.offsetY -= (after.y - before.y) * view.scale;
+    draw();
+  }
+  function zoomCenter(factor){
+    const w = canvas.width / DPR, h = canvas.height / DPR;
+    zoomAtScreenPoint(w/2, h/2, factor);
+  }
+
+  // --- Data model ---
+  let items = [];
+  let idSeq = 1;
+  let intersectionPoints = [];
+
+  function addItem(raw,color){
+    const out = parseExpression(raw);
+    if(!out.ok) { alert('Could not parse expression:\n'+out.err); return false; }
+    const it = {id:idSeq++, type:out.type, color, raw, data:out.data, visible: true, displayMode: 'line'};
+    items.push(it);
+    updateAll();
+    colorEl.value = getRandomColor();
+    return true;
+  }
+  function updateItem(id, raw){
+    const out = parseExpression(raw);
+    if(!out.ok) { alert('Could not parse expression:\n'+out.err); return false; }
+    const index = items.findIndex(i => i.id === id);
+    if(index > -1){
+      items[index].raw = raw;
+      items[index].type = out.type;
+      items[index].data = out.data;
+      updateAll();
+      return true;
+    }
+    return false;
+  }
+  function removeItem(id){ items = items.filter(i=>i.id!==id); updateAll(); }
+  function toggleItemVisibility(id){
+    const item = items.find(i=>i.id===id);
+    if(item) item.visible = !item.visible;
+    updateAll();
+  }
+  function toggleVectorDisplay(id){
+    const item = items.find(i=>i.id===id);
+    if(item && item.type === 'vector') item.displayMode = item.displayMode === 'line' ? 'point' : 'line';
+    updateAll();
+  }
+
+  function updateAll(){
+    renderList();
+    calculateAllIntersections();
+    draw();
+  }
+
+  // --- Parser (same as before) ---
+  function parseComplexString(s) {
+    s = s.replace(/\s+/g,'');
+    if (!s) return {x:0, y:0};
+
+    while(s.startsWith('(') && s.endsWith(')')) {
+      let depth = 0; let split = false;
+      for(let i=0; i<s.length-1; i++){
+        if(s[i] === '(') depth++;
+        else if(s[i] === ')') depth--;
+        if(depth === 0) { split = true; break; }
+      }
+      if(!split) s = s.slice(1,-1);
+      else break;
+    }
+
+    if (s.startsWith('-(') && s.endsWith(')')) {
+      const inner = parseComplexString(s.slice(2, -1));
+      return {x: -inner.x, y: -inner.y};
+    }
+    if (s.startsWith('+(') && s.endsWith(')')) {
+      return parseComplexString(s.slice(2, -1));
+    }
+
+    const termRegex = /([+-]?)((?:\d+\/\d+|\d*\.?\d*pi(?:\/\d+(?:\.\d+)?)?|\d+(?:\.\d+)?|e))?(i)?/gi;
+    let x = 0, y = 0;
+    const matches = s.matchAll(termRegex);
+
+    for (const match of matches) {
+      if(match[0] === '') continue;
+      let signStr = match[1] || '+';
+      let valStr = match[2];
+      let isImag = !!match[3];
+
+      let val = 1;
+      if (!valStr) val = 1;
+      else val = evalNum(valStr);
+
+      let sign = (signStr === '-') ? -1 : 1;
+
+      if (isImag) y += sign * val;
+      else if (valStr) x += sign * val;
+    }
+    return {x, y};
+  }
+
+  function parseZOffset(s) {
+    s = s.trim();
+    if(s.startsWith('z')) s = s.substring(1);
+    else if(s.toLowerCase().startsWith('z')) s = s.substring(1);
+    const val = parseComplexString(s);
+    return {x: -val.x, y: -val.y};
+  }
+
+  function parseModulusPart(s) {
+    s = s.trim();
+    if(s === '|z|') return {ok: true, z: {x:0, y:0}};
+    const match = s.match(/^\|(.+)\|$/);
+    if (!match) return { ok: false };
+    const inner = match[1];
+    if(!inner.includes('z')) return {ok:false};
+    const center = parseZOffset(inner);
+    return { ok: true, z: center };
+  }
+
+  function parseArgPart(s) {
+    s = s.trim();
+    const match = s.match(/^arg\((.+)\)$/);
+    if (!match) return { ok: false };
+    const inner = match[1];
+    const center = parseZOffset(inner);
+    return { ok: true, z: center };
+  }
+
+  function parseExpression(s){
+    const original_s = s;
+    s = s.trim().replace(/ /g, '').replace(/<=/g,'≤').replace(/>=/g,'≥');
+
+    let vMatch = s.match(/^z=(.+)$/i);
+    if(vMatch){
+      const expr = vMatch[1];
+      let opMatch = expr.match(/^\((.+)\)([+-])\((.+)\)$/);
+      if(opMatch){
+        let z1 = parseComplexString(opMatch[1]);
+        let z2 = parseComplexString(opMatch[3]);
+        let res = (opMatch[2] === '+') ? {x: z1.x + z2.x, y: z1.y + z2.y} : {x: z1.x - z2.x, y: z1.y - z2.y};
+        return {ok:true, type:'vector', data:{z:res}};
+      }
+      let c = parseComplexString(expr);
+      return {ok:true, type:'vector', data:{z:c}};
+    }
+
+    const parts = s.split(/([<>≤≥=])/);
+
+    if (parts.length === 3) {
+      const left = parts[0]; const op = parts[1]; const right = parts[2];
+
+      if (left.startsWith('|') && right.startsWith('|')) {
+        const z1 = parseModulusPart(left); const z2 = parseModulusPart(right);
+        if (z1.ok && z2.ok) return {ok:true, type:'bisector', data:{z1:z1.z, z2:z2.z, op}};
+      }
+      if (left.startsWith('|')) {
+        const z1 = parseModulusPart(left); const val = evalNum(right);
+        if (z1.ok && !isNaN(val)) return {ok:true, type:'circle', data:{center:z1.z, r:val, op}};
+      }
+      if (right.startsWith('|')) {
+        const z1 = parseModulusPart(right); const val = evalNum(left);
+        const flip = { '<': '>', '>': '<', '≤': '≥', '≥': '≤', '=': '=' };
+        if (z1.ok && !isNaN(val)) return {ok:true, type:'circle', data:{center:z1.z, r:val, op: flip[op]}};
+      }
+      if (left.startsWith('arg')) {
+        const z1 = parseArgPart(left); const val = evalAngle(right);
+        if (z1.ok && !isNaN(val)) return {ok:true, type:'half-line', data:{z0:z1.z, theta:val, op}};
+      }
+    }
+    else if (parts.length === 5) {
+      const A = parts[0]; const op1 = parts[1];
+      const B = parts[2]; const op2 = parts[3];
+      const C = parts[4];
+
+      if (B.startsWith('|')) {
+        const z1 = parseModulusPart(B);
+        const r1 = evalNum(A), r2 = evalNum(C);
+        if (z1.ok && !isNaN(r1) && !isNaN(r2)) return { ok: true, type: 'annulus', data: { center: z1.z, r1, r2, op1, op2 } };
+      }
+      if (B.startsWith('arg')) {
+        const valA = evalAngle(A), valC = evalAngle(C);
+        const z1 = parseArgPart(B);
+        if (z1.ok && !isNaN(valA) && !isNaN(valC)) return { ok: true, type: 'sector', data: { z0: z1.z, theta1: valA, theta2: valC, op1, op2 } };
+      }
+    }
+
+    if(s.match(/[<>≤≥=]/) && !s.startsWith('z=')) {
+      return {ok:false, err: "Invalid inequality format"};
+    }
+
+    const c = parseComplexString(s);
+    if (!isNaN(c.x) && !isNaN(c.y) && (c.x!==0 || c.y!==0 || s.includes('0'))) return {ok:true, type:'vector', data:{z:c}};
+    return {ok:false,err:`unrecognized format: ${original_s}`};
+  }
+
+  // --- Rendering ---
+  function drawLabelWithBg(text, x, y, color) {
+    if(!color) color = currentThemeColors.text;
+    ctx.save();
+    ctx.font = (settings.enlargeText ? '14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                                    : '12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace');
+    const metrics = ctx.measureText(text);
+    const w = metrics.width;
+    const h = settings.enlargeText ? 16 : 14;
+    const pad = 3;
+    ctx.fillStyle = currentThemeColors.panel;
+    ctx.fillRect(x - pad, y - h + pad, w + pad*2, h + pad);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function getNiceStep(targetPixelStep) {
+    const worldStep = targetPixelStep / view.scale;
+    const pow10 = Math.pow(10, Math.floor(Math.log10(worldStep)));
+    const relStep = worldStep / pow10;
+    if (relStep < 2) return pow10;
+    if (relStep < 5) return 2 * pow10;
+    return 5 * pow10;
+  }
+
+  function drawAxisArrow(x1,y1,x2,y2){
+    const ang = Math.atan2(y2-y1, x2-x1);
+    const head = settings.enlargeText ? 10 : 8;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - head*Math.cos(ang-0.45), y2 - head*Math.sin(ang-0.45));
+    ctx.lineTo(x2 - head*Math.cos(ang+0.45), y2 - head*Math.sin(ang+0.45));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawGrid() {
+    const w = canvas.width / DPR, h = canvas.height / DPR;
+    ctx.clearRect(0, 0, w, h);
+
+    const step = getNiceStep(70);
+    const worldBounds = {
+      minX: screenToWorld(0, 0).x,
+      maxX: screenToWorld(w, 0).x,
+      minY: screenToWorld(0, h).y,
+      maxY: screenToWorld(0, 0).y
+    };
+    const first_x = Math.floor(worldBounds.minX / step) * step;
+    const first_y = Math.floor(worldBounds.minY / step) * step;
+
+    if(settings.showGrid){
+      ctx.lineWidth = 1; ctx.strokeStyle = currentThemeColors.minor; ctx.beginPath();
+      const minorStep = step / 5;
+      const first_mx = Math.floor(worldBounds.minX / minorStep) * minorStep;
+      const first_my = Math.floor(worldBounds.minY / minorStep) * minorStep;
+      for (let x = first_mx; x < worldBounds.maxX; x += minorStep) { const sx = worldToScreen(x, 0).x; ctx.moveTo(sx, 0); ctx.lineTo(sx, h); }
+      for (let y = first_my; y < worldBounds.maxY; y += minorStep) { const sy = worldToScreen(0, y).y; ctx.moveTo(0, sy); ctx.lineTo(w, sy); }
+      ctx.stroke();
+
+      ctx.lineWidth = 1; ctx.strokeStyle = currentThemeColors.major; ctx.beginPath();
+      for (let x = first_x; x < worldBounds.maxX; x += step) { const sx = worldToScreen(x, 0).x; ctx.moveTo(sx, 0); ctx.lineTo(sx, h); }
+      for (let y = first_y; y < worldBounds.maxY; y += step) { const sy = worldToScreen(0, y).y; ctx.moveTo(0, sy); ctx.lineTo(w, sy); }
+      ctx.stroke();
+    }
+
+    const origin = worldToScreen(0, 0);
+
+    if(settings.showAxes){
+      ctx.strokeStyle = currentThemeColors.axis;
+      ctx.fillStyle = currentThemeColors.axis;
+      ctx.lineWidth = settings.enlargeText ? 2.0 : 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, h);
+      ctx.moveTo(0, origin.y); ctx.lineTo(w, origin.y);
+      ctx.stroke();
+
+      if(settings.showAxisArrows){
+        drawAxisArrow(w - 30, origin.y, w - 10, origin.y);
+        drawAxisArrow(origin.x, 30, origin.x, 10);
+      }
+
+      if(settings.showAxisNames){
+        drawLabelWithBg('Real', w - 56, clamp(origin.y + 22, 22, h - 8), currentThemeColors.text);
+
+        // ✅ FIX: Imaginary label to the LEFT of the vertical number line (y-axis)
+        const imagX = clamp(origin.x - 92, 12, w - 110);
+        drawLabelWithBg('Imaginary', imagX, 18, currentThemeColors.text);
+      }
+    }
+
+    if(settings.showAxes && settings.showAxisLabels){
+      for (let x = first_x; x < worldBounds.maxX; x += step) {
+        if (Math.abs(x) < Epsilon) continue;
+        const p = worldToScreen(x, 0);
+        drawLabelWithBg(formatNum(x), p.x + 4, origin.y - 6);
+      }
+      for (let y = first_y; y < worldBounds.maxY; y += step) {
+        if (Math.abs(y) < Epsilon) continue;
+        const p = worldToScreen(0, y);
+        drawLabelWithBg(formatNum(y) + 'i', origin.x + 6, p.y - 4);
+      }
+    }
+  }
+
+  // ✅ Hover info restored
+  let hoverInfo = null;
+
+  function draw(){
+    fitCanvas();
+    drawGrid();
+
+    for(let it of items){
+      if(!it.visible) continue;
+      ctx.save();
+      ctx.strokeStyle = it.color;
+      ctx.fillStyle = it.color;
+      ctx.lineWidth = settings.enlargeText ? 2.6 : 2;
+
+      if(it.type==='vector') drawVector(it);
+      else if(it.type==='circle') drawCircle(it);
+      else if(it.type==='bisector') drawBisector(it);
+      else if(it.type==='half-line') drawHalfLine(it);
+      else if(it.type==='annulus') drawAnnulus(it);
+      else if(it.type==='sector') drawSector(it);
+
+      ctx.restore();
+    }
+
+    for(const pt of intersectionPoints){
+      const p = worldToScreen(pt.x, pt.y);
+      ctx.fillStyle = currentThemeColors.intersect;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, settings.enlargeText ? 7 : 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if(hoverInfo){
+      const p = worldToScreen(hoverInfo.pt.x, hoverInfo.pt.y);
+      ctx.save();
+      ctx.fillStyle = hoverInfo.color || currentThemeColors.text;
+      ctx.strokeStyle = currentThemeColors.text;
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, settings.enlargeText ? 7 : 5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, settings.enlargeText ? 10 : 8, 0, Math.PI*2);
+      ctx.stroke();
+
+      const labelText = hoverInfo.label || complexLabel(hoverInfo.pt.x, hoverInfo.pt.y);
+      drawLabelWithBg(labelText, p.x + 12, p.y - 10, currentThemeColors.text);
+      ctx.restore();
+    }
+  }
+
+  function drawVector(it){
+    const z = it.data.z; const p = worldToScreen(z.x,z.y);
+    if(it.displayMode === 'point'){
+      ctx.beginPath(); ctx.arc(p.x, p.y, settings.enlargeText ? 6 : 4, 0, Math.PI*2); ctx.fill();
+    } else {
+      const o = worldToScreen(0,0); ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+      const ang = Math.atan2(p.y-o.y, p.x-o.x); const head = settings.enlargeText ? 12 : 10; ctx.beginPath(); ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x - head*Math.cos(ang-0.4), p.y - head*Math.sin(ang-0.4));
+      ctx.lineTo(p.x - head*Math.cos(ang+0.4), p.y - head*Math.sin(ang+0.4));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawCircle(it){
+    const c = it.data.center; const r = it.data.r; const pc = worldToScreen(c.x,c.y); const screenR = Math.abs(r*view.scale);
+    if(['<','≤','>','≥'].includes(it.data.op)){
+      ctx.save(); ctx.fillStyle = it.color; ctx.globalAlpha = 0.2; const w = canvas.width/DPR, h = canvas.height/DPR; ctx.beginPath();
+      if(it.data.op === '>' || it.data.op === '≥'){ ctx.rect(0,0,w,h); ctx.arc(pc.x, pc.y, screenR, 0, Math.PI*2, true); }
+      else { ctx.arc(pc.x, pc.y, screenR, 0, Math.PI*2); }
+      ctx.fill(); ctx.restore();
+    }
+    if(it.data.op === '<' || it.data.op === '>') ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.arc(pc.x, pc.y, screenR, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = it.color; ctx.beginPath(); ctx.arc(pc.x, pc.y, settings.enlargeText ? 6 : 4,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawAnnulus(it){
+    const c = it.data.center;
+    const r1 = it.data.r1; const r2 = it.data.r2;
+    const pc = worldToScreen(c.x, c.y);
+    const sr1 = Math.abs(r1*view.scale);
+    const sr2 = Math.abs(r2*view.scale);
+
+    ctx.save(); ctx.fillStyle = it.color; ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    ctx.arc(pc.x, pc.y, sr2, 0, Math.PI*2, false);
+    ctx.arc(pc.x, pc.y, sr1, 0, Math.PI*2, true);
+    ctx.fill(); ctx.restore();
+
+    if(it.data.op1 === '<' || it.data.op1 === '>') ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.arc(pc.x, pc.y, sr1, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+
+    if(it.data.op2 === '<' || it.data.op2 === '>') ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.arc(pc.x, pc.y, sr2, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.fillStyle = it.color; ctx.beginPath(); ctx.arc(pc.x, pc.y, settings.enlargeText ? 6 : 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawBisector(it){
+    const {z1, z2, op} = it.data;
+    const p1 = worldToScreen(z1.x,z1.y), p2 = worldToScreen(z2.x,z2.y);
+    const mx = (z1.x+z2.x)/2, my = (z1.y+z2.y)/2;
+    const dx = z2.x - z1.x, dy = z2.y - z1.y;
+    const perp_dx = -dy, perp_dy = dx;
+
+    const far = (canvas.width + canvas.height) / view.scale;
+    const a = worldToScreen(mx + perp_dx*far, my + perp_dy*far);
+    const b = worldToScreen(mx - perp_dx*far, my - perp_dy*far);
+
+    if(['<','≤','>','≥'].includes(op)){
+      ctx.save(); ctx.fillStyle = it.color; ctx.globalAlpha = 0.2;
+      const dot_z1 = (z1.x-mx)*dx + (z1.y-my)*dy;
+      const which_side = (op === '<' || op === '≤') ? Math.sign(dot_z1) : -Math.sign(dot_z1);
+      const c1 = worldToScreen(mx + perp_dx*far + dx*far*which_side, my + perp_dy*far + dy*far*which_side);
+      const c2 = worldToScreen(mx - perp_dx*far + dx*far*which_side, my - perp_dy*far + dy*far*which_side);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c2.x, c2.y); ctx.lineTo(c1.x, c1.y); ctx.closePath();
+      ctx.fill(); ctx.restore();
+    }
+
+    if(op === '<' || op === '>') ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = it.color;
+    ctx.beginPath(); ctx.arc(p1.x,p1.y,settings.enlargeText ? 6 : 4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p2.x,p2.y,settings.enlargeText ? 6 : 4,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawHalfLine(it){
+    const { z0, theta, op } = it.data;
+    const p0 = worldToScreen(z0.x, z0.y);
+    const canvasTheta = -theta;
+    const far = (canvas.width + canvas.height) / view.scale * 2;
+    const cutAngle = 0;
+
+    if (["<","≤",">","≥"].includes(op)) {
+      let includesZero = false;
+      if (op === '<' || op === '≤') includesZero = (0 < theta);
+      else if (op === '>' || op === '≥') includesZero = (0 > theta);
+
+      const shortestPathIsCCW = (canvasTheta > 0);
+      const ccw = includesZero ? shortestPathIsCCW : !shortestPathIsCCW;
+
+      ctx.save(); ctx.fillStyle = it.color; ctx.globalAlpha = 0.2;
+      ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
+      ctx.arc(p0.x, p0.y, far*view.scale, canvasTheta, cutAngle, ccw);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+
+      const cutPt = worldToScreen(z0.x + far, z0.y);
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(cutPt.x, cutPt.y); ctx.stroke();
+    }
+
+    const endPt = worldToScreen( z0.x + far * Math.cos(theta), z0.y + far * Math.sin(theta) );
+    if (op === "<" || op === ">") ctx.setLineDash([8, 8]); else ctx.setLineDash([]);
+
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(endPt.x, endPt.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = it.color; ctx.beginPath(); ctx.arc(p0.x, p0.y, settings.enlargeText ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawSector(it){
+    const { z0, theta1, theta2, op1, op2 } = it.data;
+    const p0 = worldToScreen(z0.x, z0.y);
+    const far = (canvas.width + canvas.height) / view.scale * 2;
+    const rScreen = far * view.scale;
+
+    ctx.save(); ctx.fillStyle = it.color; ctx.globalAlpha = 0.2;
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y);
+    ctx.arc(p0.x, p0.y, rScreen, -theta1, -theta2, true);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+
+    const p1 = worldToScreen(z0.x + far*Math.cos(theta1), z0.y + far*Math.sin(theta1));
+    if (op1 === "<" || op1 === ">") ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke(); ctx.setLineDash([]);
+
+    const p2 = worldToScreen(z0.x + far*Math.cos(theta2), z0.y + far*Math.sin(theta2));
+    if (op2 === "<" || op2 === ">") ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.fillStyle = it.color; ctx.beginPath(); ctx.arc(p0.x, p0.y, settings.enlargeText ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // --- UI bindings ---
+  const exprEl = document.getElementById('expr');
+  const colorEl = document.getElementById('color');
+  const addBtn = document.getElementById('addBtn');
+  const itemsEl = document.getElementById('items');
+  const clearAllBtn = document.getElementById('clearAll');
+  const themeToggle = document.getElementById('themeToggle');
+
+  function onAdd() {
+    const success = addItem(exprEl.value, colorEl.value);
+    if(success) { exprEl.value = ''; exprEl.focus(); }
+  }
+  addBtn.addEventListener('click', onAdd);
+  exprEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') onAdd(); });
+
+  clearAllBtn.addEventListener('click', ()=>{ items=[]; updateAll(); });
+
+  themeToggle.addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+    updateThemeColors();
+    updateThemeIcon();
+    draw();
+  });
+
+  document.querySelectorAll('.char-buttons button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const char = btn.dataset.char;
+      const start = exprEl.selectionStart, end = exprEl.selectionEnd;
+      let val = exprEl.value;
+      if(char.endsWith('()')){
+        val = val.substring(0, start) + char + val.substring(end);
+        exprEl.value = val;
+        exprEl.selectionStart = exprEl.selectionEnd = start + char.length - 1;
+      } else {
+        val = val.substring(0, start) + char + val.substring(end);
+        exprEl.value = val;
+        exprEl.selectionStart = exprEl.selectionEnd = start + char.length;
+      }
+      exprEl.focus();
+    });
+  });
+
+  // --- SVG icons for list buttons ---
+  function eyeIcon(){
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>`;
+  }
+  function eyeOffIcon(){
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3l18 18"></path>
+      <path d="M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-4.4"></path>
+      <path d="M9.9 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.3 17.3 0 0 1-4.2 5.3"></path>
+      <path d="M6.2 6.2C3.5 8.4 2 12 2 12s3.5 7 10 7a10.7 10.7 0 0 0 3.2-.5"></path>
+    </svg>`;
+  }
+  function pencilIcon(){
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+    </svg>`;
+  }
+  function binIcon(){
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"></path>
+      <path d="M8 6V4h8v2"></path>
+      <path d="M19 6l-1 14H6L5 6"></path>
+      <path d="M10 11v6"></path>
+      <path d="M14 11v6"></path>
+    </svg>`;
+  }
+
+  function startEditing(it, meta, textDiv){
+    textDiv.style.display = 'none';
+    const editInput = document.createElement('input');
+    editInput.type = 'text';
+    editInput.value = it.raw;
+    meta.prepend(editInput);
+    editInput.focus(); editInput.select();
+
+    const onFinishEditing = () => {
+      const success = updateItem(it.id, editInput.value);
+      if(success) it.raw = editInput.value;
+      editInput.remove();
+      textDiv.textContent = it.raw;
+      textDiv.style.display = 'block';
+    };
+
+    editInput.addEventListener('blur', onFinishEditing);
+    editInput.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') onFinishEditing();
+      if(e.key==='Escape'){ editInput.value=it.raw; onFinishEditing(); }
+    });
+  }
+
+  function renderList(){
+    itemsEl.innerHTML='';
+    let visibleIndex = 0;
+
+    for(let it of items){
+      visibleIndex += 1;
+
+      const div = document.createElement('div'); div.className='item';
+
+      const num = document.createElement('div');
+      num.className = 'expr-num';
+      num.textContent = String(visibleIndex);
+
+      const sw = document.createElement('div'); sw.className='swatch'; sw.style.background = it.color;
+      sw.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = it.color;
+        input.style.position = 'absolute';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.click();
+        input.addEventListener('change', () => {
+          it.color = input.value;
+          sw.style.background = it.color;
+          document.body.removeChild(input);
+          draw();
+        });
+        input.addEventListener('blur', () => document.body.removeChild(input));
+      });
+
+      const visBtn = document.createElement('button');
+      visBtn.className = 'iconbtn';
+      visBtn.title = it.visible ? "Hide" : "Show";
+      visBtn.setAttribute("aria-label", visBtn.title);
+      visBtn.innerHTML = it.visible ? eyeIcon() : eyeOffIcon();
+      visBtn.addEventListener('click', ()=>toggleItemVisibility(it.id));
+
+      const meta = document.createElement('div'); meta.className='meta';
+      const textDiv = document.createElement('div'); textDiv.textContent = it.raw;
+      const typeDiv = document.createElement('div'); typeDiv.className='muted'; typeDiv.textContent=it.type;
+      meta.appendChild(textDiv); meta.appendChild(typeDiv);
+      textDiv.addEventListener('click', ()=> startEditing(it, meta, textDiv));
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'iconbtn';
+      editBtn.title = "Edit";
+      editBtn.setAttribute("aria-label","Edit");
+      editBtn.innerHTML = pencilIcon();
+      editBtn.addEventListener('click', ()=> startEditing(it, meta, textDiv));
+
+      div.appendChild(num);
+      div.appendChild(sw);
+      div.appendChild(visBtn);
+      div.appendChild(meta);
+      div.appendChild(editBtn);
+
+      if(it.type === 'vector'){
+        const displayToggle = document.createElement('button');
+        displayToggle.textContent = it.displayMode === 'line' ? 'Vector' : 'Point';
+        displayToggle.addEventListener('click', ()=> toggleVectorDisplay(it.id));
+        div.appendChild(displayToggle);
+      }
+
+      const del = document.createElement('button');
+      del.className = 'iconbtn';
+      del.title = "Delete";
+      del.setAttribute("aria-label","Delete");
+      del.innerHTML = binIcon();
+      del.addEventListener('click', ()=>{ removeItem(it.id); });
+
+      div.appendChild(del);
+      itemsEl.appendChild(div);
+    }
+  }
+
+  // --- Save / Load / Fit ---
+  function saveGraphs() {
+    const dataToSave = items.map(it => ({ raw: it.raw, color: it.color }));
+    const textData = JSON.stringify(dataToSave, null, 2);
+    const blob = new Blob([textData], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'graphs.IMgraph';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  function loadGraphs() {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.IMgraph,text/plain';
+    input.onchange = e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = readerEvent => {
+        try {
+          const loadedItems = JSON.parse(readerEvent.target.result);
+          if (!Array.isArray(loadedItems)) throw new Error("Invalid format");
+          items = []; idSeq = 1;
+          loadedItems.forEach(itemData => {
+            if (itemData.raw && itemData.color) {
+              const out = parseExpression(itemData.raw);
+              if(out.ok) {
+                const it = {id:idSeq++, type:out.type, color: itemData.color, raw: itemData.raw, data:out.data, visible: true, displayMode: 'line'};
+                items.push(it);
+              }
+            }
+          });
+          updateAll();
+        } catch (err) { alert('Failed to load or parse the file.\n' + err.message); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  document.getElementById("saveIconBtn").addEventListener("click", saveGraphs);
+  document.getElementById("loadIconBtn").addEventListener("click", loadGraphs);
+  document.getElementById("fitBtn").addEventListener("click", fitViewToObjects);
+
+  // --- Zoom buttons ---
+  document.getElementById("zoomInBtn").addEventListener("click", ()=> zoomCenter(1.25));
+  document.getElementById("zoomOutBtn").addEventListener("click", ()=> zoomCenter(0.8));
+  document.getElementById("zoomHomeBtn").addEventListener("click", ()=>{ view={offsetX:0,offsetY:0,scale:40}; draw(); });
+
+  // --- Supports dropdown positioning ---
+  const supportsBtn = document.getElementById("supportsBtn");
+  const supportsPopover = document.getElementById("supportsPopover");
+  const supportsClose = document.getElementById("supportsClose");
+
+  function positionSupportsPopover(){
+    if(!supportsPopover.classList.contains("open")) return;
+
+    const btnRect = supportsBtn.getBoundingClientRect();
+    const pop = supportsPopover;
+
+    let left = btnRect.left;
+    let top = btnRect.bottom + 10;
+
+    const maxLeft = window.innerWidth - pop.offsetWidth - 10;
+    left = clamp(left, 10, maxLeft);
+
+    if(top + pop.offsetHeight > window.innerHeight - 10){
+      const flipped = btnRect.top - 10 - pop.offsetHeight;
+      if(flipped > 10) top = flipped;
+    }
+
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  }
+
+  function openSupports(){
+    supportsPopover.classList.add("open");
+    supportsBtn.setAttribute("aria-expanded","true");
+    positionSupportsPopover();
+  }
+  function closeSupports(){
+    supportsPopover.classList.remove("open");
+    supportsBtn.setAttribute("aria-expanded","false");
+  }
+  supportsBtn.addEventListener("click", ()=>{
+    if(supportsPopover.classList.contains("open")) closeSupports();
+    else openSupports();
+  });
+  supportsClose.addEventListener("click", closeSupports);
+
+  window.addEventListener("mousedown", (e)=>{
+    if(!supportsPopover.classList.contains("open")) return;
+    const inside = supportsPopover.contains(e.target) || supportsBtn.contains(e.target);
+    if(!inside) closeSupports();
+  });
+
+  // --- Sidebar collapse/resizer + interactions ---
+  const resizer = document.getElementById('resizer');
+  const collapseBtn = document.getElementById('collapseBtn');
+  const app = document.querySelector('.app');
+  const sidebar = app.children[0];
+  let lastSidebarWidth = 380;
+
+  let interaction = { type: null, last: { x: 0, y: 0 }, pinchInitialDist: 0 };
+
+  function onInteractionStart(e) {
+    const target = e.target;
+
+    if (e.touches && e.touches.length === 2) {
+      interaction.type = 'pinching';
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      interaction.pinchInitialDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    }
+    else if (target === resizer) {
+      interaction.type = 'resizing';
+    }
+    else if (target === canvas) {
+      interaction.type = 'panning';
+      canvas.style.cursor = 'grabbing';
+    } else return;
+
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    interaction.last = { x: point.clientX, y: point.clientY };
+
+    window.addEventListener('mousemove', onInteractionMove);
+    window.addEventListener('mouseup', onInteractionEnd);
+    window.addEventListener('touchmove', onInteractionMove, { passive: false });
+    window.addEventListener('touchend', onInteractionEnd);
+  }
+
+  function onInteractionMove(e) {
+    if (!interaction.type) return;
+    e.preventDefault();
+
+    if (interaction.type === 'pinching') {
+      if (e.touches.length < 2) return;
+      const t1 = e.touches[0]; const t2 = e.touches[1];
+      const newDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      const zoomFactor = newDist / interaction.pinchInitialDist;
+      const midPoint = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+      const canvasRect = canvas.getBoundingClientRect();
+      zoomAtScreenPoint(midPoint.x - canvasRect.left, midPoint.y - canvasRect.top, zoomFactor);
+      interaction.pinchInitialDist = newDist;
+      return;
+    }
+
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - interaction.last.x;
+    const dy = point.clientY - interaction.last.y;
+    interaction.last = { x: point.clientX, y: point.clientY };
+
+    if (interaction.type === 'panning') {
+      view.offsetX += dx;
+      view.offsetY += dy;
+      hoverInfo = null;
+      draw();
+    } else if (interaction.type === 'resizing') {
+      let newWidth = sidebar.getBoundingClientRect().width + dx;
+      newWidth = clamp(newWidth, 250, 600);
+      lastSidebarWidth = newWidth;
+      app.style.gridTemplateColumns = `${newWidth}px 10px 1fr`;
+      draw();
+    }
+  }
+
+  function onInteractionEnd() {
+    canvas.style.cursor = 'default';
+    interaction.type = null;
+
+    window.removeEventListener('mousemove', onInteractionMove);
+    window.removeEventListener('mouseup', onInteractionEnd);
+    window.removeEventListener('touchmove', onInteractionMove);
+    window.removeEventListener('touchend', onInteractionEnd);
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    const delta = -e.deltaY;
+    const zoomFactor = Math.exp(delta * 0.0015);
+    zoomAtScreenPoint(e.offsetX, e.offsetY, zoomFactor);
+  }
+
+  const toggleSidebar = () => {
+    const isCollapsed = app.classList.contains('sidebar-collapsed');
+    if (isCollapsed) {
+      app.classList.remove('sidebar-collapsed');
+      app.style.gridTemplateColumns = `${lastSidebarWidth}px 10px 1fr`;
+    } else {
+      const currentWidth = sidebar.getBoundingClientRect().width;
+      if (currentWidth > 50) lastSidebarWidth = currentWidth;
+      app.classList.add('sidebar-collapsed');
+    }
+    setTimeout(draw, 50);
+  };
+
+  document.addEventListener('mousedown', onInteractionStart);
+  document.addEventListener('touchstart', onInteractionStart, { passive: false });
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  collapseBtn.addEventListener('click', toggleSidebar);
+
+  // --- Fit view ---
+  function fitViewToObjects(){
+    const visibleItems = items.filter(it => it.visible);
+    if (visibleItems.length === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const updateBounds = (x,y) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); };
+
+    visibleItems.forEach(it => {
+      if(it.type === 'vector'){ updateBounds(0,0); updateBounds(it.data.z.x, it.data.z.y); }
+      else if(it.type === 'circle'){ updateBounds(it.data.center.x - it.data.r, it.data.center.y - it.data.r); updateBounds(it.data.center.x + it.data.r, it.data.center.y + it.data.r); }
+      else if(it.type === 'bisector'){ updateBounds(it.data.z1.x, it.data.z1.y); updateBounds(it.data.z2.x, it.data.z2.y); }
+      else if(it.type === 'half-line'){ updateBounds(it.data.z0.x, it.data.z0.y); }
+      else if(it.type === 'annulus'){ const maxR = Math.max(it.data.r1, it.data.r2); updateBounds(it.data.center.x - maxR, it.data.center.y - maxR); updateBounds(it.data.center.x + maxR, it.data.center.y + maxR); }
+      else if(it.type === 'sector'){ updateBounds(it.data.z0.x, it.data.z0.y); }
+    });
+
+    if(minX === Infinity){ minX = -5; maxX = 5; minY = -5; maxY = 5; }
+
+    const w = canvas.width/DPR, h = canvas.height/DPR;
+    const worldWidth = (maxX - minX) * 1.2 || 10;
+    const worldHeight = (maxY - minY) * 1.2 || 10;
+
+    const newScaleX = w / worldWidth;
+    const newScaleY = h / worldHeight;
+
+    view.scale = Math.min(newScaleX, newScaleY);
+    const centerX = (minX + maxX)/2, centerY = (minY + maxY)/2;
+
+    view.offsetX = w/2 - centerX * view.scale;
+    view.offsetY = h/2 + centerY * view.scale;
+    draw();
+  }
+
+  // --- Hover detection restored ---
+  function handleHover(e) {
+    const w = screenToWorld(e.offsetX, e.offsetY);
+    const tolPoint = 8 / view.scale;
+    const tolLine  = 5 / view.scale;
+    let closest = null;
+
+    const setHover = (pt, color, isIntersection = false, labelOverride = null) => {
+      closest = {
+        pt,
+        color: color || currentThemeColors.intersect,
+        isIntersection,
+        label: labelOverride || `${formatNum(pt.x)} + ${formatNum(pt.y)}i`
+      };
+    };
+
+    const dist2 = (a, b) => {
+      const dx = a.x - b.x, dy = a.y - b.y;
+      return dx*dx + dy*dy;
+    };
+
+    const projectToLine = (p, a, d) => {
+      const denom = d.x * d.x + d.y * d.y;
+      if (denom < Epsilon) return null;
+      const t = ((p.x - a.x) * d.x + (p.y - a.y) * d.y) / denom;
+      return { t, pt: { x: a.x + t * d.x, y: a.y + t * d.y } };
+    };
+
+    for (const pt of intersectionPoints) {
+      if (Math.hypot(w.x - pt.x, w.y - pt.y) < tolPoint) {
+        setHover(pt, currentThemeColors.intersect, true);
+        hoverInfo = closest;
+        draw();
+        return;
+      }
+    }
+
+    let bestSpecial = null;
+    let bestSpecialD2 = Infinity;
+
+    const considerSpecial = (pt, color, labelOverride = null) => {
+      const d2 = dist2(w, pt);
+      if (d2 < bestSpecialD2) {
+        bestSpecialD2 = d2;
+        bestSpecial = { pt, color, labelOverride };
+      }
+    };
+
+    for (const it of items.filter(i => i.visible)) {
+      if (it.type === "vector") {
+        considerSpecial({ x: 0, y: 0 }, it.color);
+        considerSpecial(it.data.z, it.color);
+        continue;
+      }
+      if (it.type === "circle") { considerSpecial(it.data.center, it.color); continue; }
+      if (it.type === "annulus") { considerSpecial(it.data.center, it.color); continue; }
+      if (it.type === "bisector") {
+        const { z1, z2 } = it.data;
+        const mid = { x: (z1.x + z2.x) / 2, y: (z1.y + z2.y) / 2 };
+        considerSpecial(z1, it.color);
+        considerSpecial(z2, it.color);
+        considerSpecial(mid, it.color);
+        continue;
+      }
+      if (it.type === "half-line") { considerSpecial(it.data.z0, it.color); continue; }
+      if (it.type === "sector") { considerSpecial(it.data.z0, it.color); continue; }
+    }
+
+    if (bestSpecial && Math.sqrt(bestSpecialD2) < tolPoint) {
+      setHover(bestSpecial.pt, bestSpecial.color, false, bestSpecial.labelOverride);
+      hoverInfo = closest;
+      draw();
+      return;
+    }
+
+    for (const it of items.filter(i => i.visible)) {
+      if (it.type === "vector" && it.displayMode === "line") {
+        const z = it.data.z;
+        const denom = z.x*z.x + z.y*z.y;
+        if (denom > Epsilon) {
+          const t = clamp((w.x*z.x + w.y*z.y) / denom, 0, 1);
+          const proj = { x: t*z.x, y: t*z.y };
+          if (Math.hypot(w.x - proj.x, w.y - proj.y) < tolLine) {
+            setHover(proj, it.color);
+            hoverInfo = closest;
+            draw();
+            return;
+          }
+        }
+        continue;
+      }
+
+      if (it.type === "circle") {
+        const c = it.data.center, r = it.data.r;
+        const dist = Math.hypot(w.x - c.x, w.y - c.y);
+        if (Math.abs(dist - r) < tolLine) {
+          const ang = Math.atan2(w.y - c.y, w.x - c.x);
+          const pt = { x: c.x + r*Math.cos(ang), y: c.y + r*Math.sin(ang) };
+          setHover(pt, it.color);
+          hoverInfo = closest;
+          draw();
+          return;
+        }
+        continue;
+      }
+
+      if (it.type === "annulus") {
+        const c = it.data.center;
+        const dist = Math.hypot(w.x - c.x, w.y - c.y);
+        const d1 = Math.abs(dist - it.data.r1);
+        const d2 = Math.abs(dist - it.data.r2);
+        const best = Math.min(d1, d2);
+        if (best < tolLine) {
+          const r = (d1 < d2) ? it.data.r1 : it.data.r2;
+          const ang = Math.atan2(w.y - c.y, w.x - c.x);
+          const pt = { x: c.x + r*Math.cos(ang), y: c.y + r*Math.sin(ang) };
+          setHover(pt, it.color);
+          hoverInfo = closest;
+          draw();
+          return;
+        }
+        continue;
+      }
+
+      if (it.type === "bisector") {
+        const { z1, z2 } = it.data;
+        const mx = (z1.x + z2.x) / 2, my = (z1.y + z2.y) / 2;
+        const d = { x: -(z2.y - z1.y), y: (z2.x - z1.x) };
+        const proj = projectToLine(w, { x: mx, y: my }, d);
+        if (proj && Math.hypot(w.x - proj.pt.x, w.y - proj.pt.y) < tolLine) {
+          setHover(proj.pt, it.color);
+          hoverInfo = closest;
+          draw();
+          return;
+        }
+        continue;
+      }
+
+      if (it.type === "half-line") {
+        const { z0, theta, op } = it.data;
+        const d = { x: Math.cos(theta), y: Math.sin(theta) };
+
+        const proj = projectToLine(w, z0, d);
+        if (proj && proj.t >= -Epsilon) {
+          if (Math.hypot(w.x - proj.pt.x, w.y - proj.pt.y) < tolLine) {
+            setHover(proj.pt, it.color);
+            hoverInfo = closest;
+            draw();
+            return;
+          }
+        }
+
+        if (["<","≤",">","≥"].includes(op)) {
+          const dx = w.x - z0.x;
+          const dy = w.y - z0.y;
+          if (dx >= -Epsilon && Math.abs(dy) < tolLine) {
+            setHover({ x: z0.x + dx, y: z0.y }, it.color);
+            hoverInfo = closest;
+            draw();
+            return;
+          }
+        }
+        continue;
+      }
+
+      if (it.type === "sector") {
+        const { z0, theta1, theta2 } = it.data;
+
+        const hitRay = (theta) => {
+          const d = { x: Math.cos(theta), y: Math.sin(theta) };
+          const proj = projectToLine(w, z0, d);
+          if (proj && proj.t >= -Epsilon) {
+            if (Math.hypot(w.x - proj.pt.x, w.y - proj.pt.y) < tolLine) {
+              setHover(proj.pt, it.color);
+              return true;
+            }
+          }
+          return false;
+        };
+
+        if (hitRay(theta1) || hitRay(theta2)) {
+          hoverInfo = closest;
+          draw();
+          return;
+        }
+        continue;
+      }
+    }
+
+    hoverInfo = null;
+    draw();
+  }
+
+  canvas.addEventListener("mousemove", (e)=>{
+    if(interaction.type) return;
+    handleHover(e);
+  });
+  canvas.addEventListener("mouseleave", ()=>{
+    hoverInfo = null;
+    draw();
+  });
+
+  // --- Intersections placeholder ---
+  function calculateAllIntersections(){ intersectionPoints = []; }
+
+  // --- Settings modal ---
+  const settingsBackdrop = document.getElementById("settingsBackdrop");
+  const settingsClose = document.getElementById("settingsClose");
+  const settingsGearBtn = document.getElementById("settingsGearBtn");
+
+  function openSettings(){
+    settingsBackdrop.classList.add("open");
+    const first = document.getElementById("toggleGrid");
+    if(first) first.focus();
+  }
+  function closeSettings(){ settingsBackdrop.classList.remove("open"); }
+
+  settingsGearBtn.addEventListener("click", openSettings);
+  settingsClose.addEventListener("click", closeSettings);
+  settingsBackdrop.addEventListener("click", (e)=>{ if(e.target === settingsBackdrop) closeSettings(); });
+  window.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ closeSettings(); closeSupports(); } });
+
+  function applySettings(){
+    document.body.classList.toggle("enlarge-text", !!settings.enlargeText);
+
+    document.getElementById("toggleGrid").checked = settings.showGrid;
+    document.getElementById("toggleAxes").checked = settings.showAxes;
+    document.getElementById("toggleAxisLabels").checked = settings.showAxisLabels;
+    document.getElementById("toggleAxisNames").checked = settings.showAxisNames;
+    document.getElementById("toggleAxisArrows").checked = settings.showAxisArrows;
+    document.getElementById("angleModeSelect").value = settings.angleMode;
+    document.getElementById("toggleEnlargeText").checked = settings.enlargeText;
+
+    draw();
+  }
+
+  document.getElementById("toggleGrid").addEventListener("change", (e)=>{ settings.showGrid = !!e.target.checked; saveSettings(); applySettings(); });
+  document.getElementById("toggleAxes").addEventListener("change", (e)=>{ settings.showAxes = !!e.target.checked; saveSettings(); applySettings(); });
+  document.getElementById("toggleAxisLabels").addEventListener("change", (e)=>{ settings.showAxisLabels = !!e.target.checked; saveSettings(); applySettings(); });
+  document.getElementById("toggleAxisNames").addEventListener("change", (e)=>{ settings.showAxisNames = !!e.target.checked; saveSettings(); applySettings(); });
+  document.getElementById("toggleAxisArrows").addEventListener("change", (e)=>{ settings.showAxisArrows = !!e.target.checked; saveSettings(); applySettings(); });
+  document.getElementById("angleModeSelect").addEventListener("change", (e)=>{ settings.angleMode = e.target.value === "deg" ? "deg" : "rad"; saveSettings(); applySettings(); });
+  document.getElementById("toggleEnlargeText").addEventListener("change", (e)=>{ settings.enlargeText = !!e.target.checked; saveSettings(); applySettings(); });
+
+  // --- Init ---
+  loadSettings();
+  fitCanvas();
+  updateThemeColors();
+  updateThemeIcon();
+  colorEl.value = getRandomColor();
+  renderList();
+  applySettings();
+  draw();
+</script>
+</body>
+</html>
