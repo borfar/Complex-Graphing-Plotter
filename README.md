@@ -7,8 +7,8 @@ https://borfar.github.io/Complex-Graphing-Plotter/
 <img width="3823" height="1844" alt="Complex Graphing Plotter screenshot" src="https://github.com/user-attachments/assets/435eb9a5-f908-4ba2-b0c6-90ef7a485ccb" />
 
 ## Credits
-Thank you to https://css.glass/ for helping with the front-end
-Debugging and front-end was assisted with ChatGPT 5.2
+- Thank you to https://css.glass/ for helping with the front-end
+- Debugging and front-end was assisted with ChatGPT 5.2
 
 ## Features
 - Plot vectors and loci on the complex plane
